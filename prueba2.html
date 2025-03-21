@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa con Google Maps API</title>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCiMq9AO7sftVSaELn8EM_DF-tjucO_lIE"></script>
+    <style>
+        #map { height: 100vh; width: 100%; }
+        #togglePoints, #toggleNames { 
+            position: absolute; 
+            bottom: 20px; 
+            z-index: 1000; 
+            padding: 10px; 
+            background: white; 
+            border: 1px solid #ccc; 
+            cursor: pointer; 
+            border-radius: 5px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); 
+        }
+        #togglePoints { left: 20px; }
+        #toggleNames { left: 80px; }
+        #menuButton {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            padding: 10px;
+            background: white;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            border-radius: 5px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+            font-size: 20px;
+        }
+        #menu {
+            position: absolute;
+            top: 20px; 
+            left: 60px;
+            width: 260px;
+            background: white;
+            border: 1px solid #ccc;
+            padding: 10px;
+            display: none;
+            z-index: 1000;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 8px;
+            text-align: center; /* Asegura que el texto también esté alineado */
+            gap: 8px;
+        }
+        .menu-item {
+            width: 100%; /* Ocupa todo el ancho disponible */
+            padding: 12px;
+            cursor: pointer;
+            background: #f0f0f0;
+            text-align: center;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.3s ease, transform 0.1s ease;
+            border: 1px solid #ddd;
+        }
+        #data-container {
+            margin-top: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            background: #fff;
+            padding: 5px;
+            border: 1px solid #ccc;
+            display: none;
+        }
+        .menu-item:hover {
+            background: #ddd;
+            transform: scale(1.05);
+        }
+
+        #menuButton {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1001;
+            padding: 10px;
+            background: white;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            border-radius: 5px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+            font-size: 20px;
+        }
+        .menu-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        #data-popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 5px; box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5); }
+        #data-popup table { width: 100%; border-collapse: collapse; }
+        #data-popup th, #data-popup td { border: 1px solid black; padding: 8px; text-align: left; }
+       /* #close-popup { margin-top: 10px; cursor: pointer; display: block; text-align: center; background: red; color: white; padding: 5px; border-radius: 5px; }
+        */#add-record { margin-top: 10px; cursor: pointer; display: block; text-align: center; background: red; color: white; padding: 5px; border-radius: 5px; }
+        #button-container {
+            display: flex;
+            align-items: center; /* Alinea verticalmente ambos botones */
+            gap: 10px; /* Espacio entre los botones */
+            margin-top: 20px;
+            }
+
+            #close-popup, #addData {
+            cursor: pointer;
+            text-align: center;
+            padding: 5px 10px;
+            border-radius: 5px;
+            }
+
+            #close-popup {
+            background: red;
+            color: white;
+            }
+
+            #addData {
+            background: green;
+            color: white;
+            }
+
+
+        #table-container {
+            max-height: 300px; /* Ajusta según lo necesites */
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+
+        /* Estilos para la tabla */
+        #table-container th {
+            background-color: #007bff; /* Color azul para los encabezados */
+            color: white; /* Texto blanco para los encabezados */
+        }
+
+        /* Estilo para las celdas de la tabla (donde están los datos) */
+        #table-container td {
+            background-color: #f9f9f9; /* Color de fondo para las celdas */
+        }
+        .popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .popup-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            width: 400px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .popup-content h3 {
+            margin-top: 0;
+            font-size: 20px;
+            text-align: center;
+        }
+
+        .popup-content label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+
+        .popup-content input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .popup-content button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .popup-content button:hover {
+            background-color: #0056b3;
+        }
+
+        .popup-content button[type="button"] {
+            background-color: #dc3545;
+        }
+
+        .popup-content button[type="button"]:hover {
+            background-color: #c82333;
+        }
+        #edit-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #ffffff;
+    border: 2px solid #007bff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    width: 300px;
+}
+
+#edit-popup label {
+    display: block;
+    margin: 5px 0;
+}
+
+#edit-popup input {
+    width: 100%;
+    padding: 5px;
+    margin-bottom: 10px;
+}
+
+#edit-popup button {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#edit-popup button:hover {
+    background-color: #0056b3;
+}
+
+        /* Estilos de ejemplo para el login */
+        #login-form {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999; /* Asegura que el formulario esté por encima de otros elementos */
+}
+
+.login-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 300px;
+}
+h2 {
+    color: #333; /* Color del título */
+    margin-bottom: 20px;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#login-button {
+    width: 100%;
+    padding: 10px;
+    background-color: #4CAF50; /* Verde */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#login-button:hover {
+    background-color: #45a049; /* Verde oscuro */
+}
+
+#error-message {
+    color: red;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+h3 {
+    color: #333; /* Color oscuro para el título */
+    font-size: 24px; /* Aumenta el tamaño del texto */
+    text-align: center; /* Centrado */
+    margin-bottom: 20px; /* Espacio debajo del título */
+    font-family: Arial, sans-serif; /* Tipografía */
+}
+#menu-title {
+    font-size: 20px; /* Tamaño de fuente moderado */
+    font-family: 'Arial', sans-serif; /* Fuente moderna */
+    color: #007bff; /* Color azul */
+    text-align: left; /* Alineado a la izquierda */
+    padding-left: 15px; /* Un poco de espacio a la izquierda */
+    border-left: 4px solid #007bff; /* Línea a la izquierda */
+    margin-bottom: 15px; /* Espacio debajo del título */
+    letter-spacing: 1px; /* Espaciado ligero entre letras */
+    font-weight: 600; /* Negrita moderada */
+    background-color: #f4f4f4; /* Fondo claro */
+    padding-top: 5px; /* Espacio arriba */
+    padding-bottom: 5px; /* Espacio abajo */
+}
+
+ </style>
+</head>
+<body>
+    <div id="login-form">
+        <div class="login-container">
+            <h2>Iniciar sesión</h2>
+            <form id="form-login">
+                <input type="text" id="usuario" placeholder="Usuario" required>
+                <input type="password" id="password" placeholder="Contraseña" required>
+                <button type="button" id="login-button">Iniciar sesión</button>
+            </form>
+            <p id="error-message"></p>
+        </div>
+    </div>
+    
+    <button id="menuButton">☰</button>
+    <div id="menu">
+        <p id="menu-title">Opciones del menú</p>
+        <button class="menu-item" id="coordenadas" >Puntos para distribuir</button>
+        <button class="menu-item" id="zona_aldama_sector1" >Zona De Aldama Sector 1</button>
+        <button class="menu-item" id="zona_aldama_sector2">Zona De Aldama Sector 2</button>
+        <button class="menu-item" id="rio_verdito">RIO VERDITO</button>
+        <button class="menu-item" id="zona_aldama_sector3">Zona De Aldama Sector 3</button>
+        <button class="menu-item" id="mariano_matamoros">MARIANO MATAMOROS</button>
+        <button class="menu-item" id="zona_centro_aldama1">Zona Centro Aldama 1</button>
+        <button class="menu-item" id="del_bosque">DEL BOSQUE</button>
+        <button class="menu-item" id="brownsville">BROWNSVILLE</button>
+        <button class="menu-item" id="los_pinos">LOS PINOS</button>
+        <button class="menu-item" id="fracc_arboledas">FRACC ARBOLEDAS</button>
+        <button class="menu-item" id="santa_isabel_sector4">Santa Isabel Sector 4</button>
+        <button class="menu-item" id="santa_isabel">SANTA ISABEL</button>
+        <button class="menu-item" id="barrio_del_pitayo">BARRIO DEL PITAYO</button>
+        <button class="menu-item" id="barrio_del_pitayo_sector2">BARRIO DEL PITAYO Sector 2</button>
+        <button class="menu-item" id="tamasopo">TAMASOPO</button>
+        <button class="menu-item" id="constitucion_sector2">Constitucion Sector 2</button>
+        <button class="menu-item" id="arboledas">ARBOLEDAS</button>
+        <button class="menu-item" id="luis_caballero">LUIS CABALLERO</button>
+        <button class="menu-item" id="constitucion_sector3">Constitucion Sector 3</button>
+        <button class="menu-item" id="constitucion">CONSTITUCION</button>
+        <button class="menu-item" id="nuevo_tamaulipas">NUEVO TAMAULIPAS</button>
+        <button class="menu-item" id="jesus_vega">JESUS VEGA</button>
+        <button class="menu-item" id="santa_isabel_sector3">Santa Isabel Sector 3</button>
+        <button class="menu-item" id="zona_de_aldama_sector4">Zona De Aldama Sector 4</button>
+        <button class="menu-item" id="zona_de_aldama_sector3">Zona De Aldama Sector 3</button>
+        <button class="menu-item" id="la_esperanza">LA ESPERANZA</button>
+        <button class="menu-item" id="santa_isabel_sector2">Santa Isabel Sector 2</button>
+        <button class="menu-item" id="antiguo_morelos_sector6">Antiguo Morelos Sector 6</button>
+        <button class="menu-item" id="antiguo_morelos_sector2">Antiguo Morelos Sector 2</button>
+        <button class="menu-item" id="antiguo_morelos_sector5">Antiguo Morelos Sector 5</button>
+        <button class="menu-item" id="antiguo_morelos_sector3">Antiguo Morelos Sector 3</button>
+        <button class="menu-item" id="antiguo_morelos_sector4">Antiguo Morelos Sector 4</button>
+        <button class="menu-item" id="antiguo_morelos_sector1">antiguo_morelos_sector1</button>
+        <button class="menu-item" id="gomez_farrias_sector2">Gomez Farias Sector 2</button>
+        <button class="menu-item" id="loma_alta_sector1">Loma Alta Sector 1</button>
+        <button class="menu-item" id="loma_alta_sector3">Loma Alta Sector 3</button>
+        <button class="menu-item" id="gomez_farrias_sector3">Gomez Farias Sector 3</button>
+        <button class="menu-item" id="loma_alta_sector5">Loma Alta Sector 5</button>
+        <button class="menu-item" id="gomez_farrias_sector4">Gomez Farias Sector 4</button>
+        <button class="menu-item" id="loma_alta_sector2">Loma Alta Sector 2</button>
+        <button class="menu-item" id="loma_alta_sector4">Loma Alta Sector 4</button>
+        <button class="menu-item" id="zona_centro_gonzalez">ZONA CENTRO GONZALEZ</button>
+        <button class="menu-item" id="ursulo_galvan">Ursulo Galvan</button>
+        <button class="menu-item" id="libertad_sector3">Libertad Sector 3</button>
+        <button class="menu-item" id="piloto">PILOTO</button>
+        <button class="menu-item" id="progreso_sector2">Progreso Sector 2</button>
+        <button class="menu-item" id="nuevo_amanecer_sector2">Nuevo Amanecer Sector 2</button>
+        <button class="menu-item" id="colonia3_gonzalez">COLONIA 3 GONZALEZ</button>
+        <button class="menu-item" id="aviacion">AVIACION</button>
+        <button class="menu-item" id="praxedis_balboa">PRAXEDIS BALBOA</button>
+        <button class="menu-item" id="tamaulipasg">TAMAULIPAS G</button>
+        <button class="menu-item" id="unidad_deportiva">UNIDAD DEPORTIVA</button>
+        <button class="menu-item" id="los_dos_amigos_sector3">Los Dos Amigos Sector 3</button>
+        <button class="menu-item" id="el_huerto">EL HUERTO</button>
+        <button class="menu-item" id="vialactea_sector2">Via Lactea Sector 2</button>
+        <button class="menu-item" id="vialactea_sector1">Via Lactea Sector 1</button>
+        <button class="menu-item" id="los_dos_amigos_sector2">Los Dos Amigos Sector 2</button>
+        <button class="menu-item" id="graciano_sanchez_sector4">Graciano Sanchez Sector 4</button>
+        <button class="menu-item" id="graciano_sanchez_sector1">Graciano Sanchez Sector 1</button>
+        <button class="menu-item" id="buenos_aires">BUENOS AIRES</button>
+        <button class="menu-item" id="unidad_deportiva3">Unidad Deportiva 3</button>
+        <button class="menu-item" id="ampliacion_jardin_manuel">AMPLIACION JARDIN MANUEL</button>
+        <button class="menu-item" id="cesar_lopez_de_lara2">CESAR LOPEZ DE LARA 2</button>
+        <button class="menu-item" id="progreso">PROGRESO</button>
+        <button class="menu-item" id="unidad_deportiva2">Unidad Deportiva 2</button>
+        <button class="menu-item" id="colonia1_gonzalez">COLONIA 1 GONZALEZ</button>
+        <button class="menu-item" id="graciano_sanchez_sector5">Graciano Sanchez Sector 5</button>
+        <button class="menu-item" id="cesar_lopez_de_lara3">CESAR LOPEZ DE LARA 3</button>
+        <button class="menu-item" id="graciano_sanchez_sector3">Graciano Sanchez Sector 3</button>
+        <button class="menu-item" id="cesar_lopez_de_lara">CESAR LOPEZ DE LARA</button>
+        <button class="menu-item" id="libertad_sector1">Libertad Sector 1</button>
+        <button class="menu-item" id="libertad_sector2">Libertad Sector 2</button>
+        <button class="menu-item" id="colonia2_manuel">COLONIA 2 MANUEL</button>
+        <button class="menu-item" id="nuevo_amanecer">NUEVO AMANECER</button>
+        <button class="menu-item" id="los_dos_amigos">LOS DOS AMIGOS</button>
+        <button class="menu-item" id="grupo_jardin">GRUPO JARDIN</button>
+        <button class="menu-item" id="gonzalez_villa_centro">GONZALEZ VILLA CENTRO</button>
+        <button class="menu-item" id="san_luisito">SAN LUISITO</button>
+        <button class="menu-item" id="la_laguna_sector3">LA LAGUNA Sector 3</button>
+        <button class="menu-item" id="la_laguna_sector2">LA LAGUNA Sector 2</button>
+        <button class="menu-item" id="ampliacion_jardin">AMPLIACION JARDIN</button>
+        <button class="menu-item" id="colonia4">COLONIA 4</button>
+        <button class="menu-item" id="fundadores_sector2">Fundadores Sector 2</button>
+        <button class="menu-item" id="graciano_sanchez_sector2">Graciano Sanchez Sector 2</button>
+        <button class="menu-item" id="ampliacion_unidad_deportiva">AMPLIACION UNIDAD DEPORTIVA</button>
+        <button class="menu-item" id="graciano_sanchez_sector6">Graciano Sanchez Sector 6</button>
+        <button class="menu-item" id="fundadores">FUNDADORES</button>
+        <button class="menu-item" id="amp_san_luisito">AMP San Luisito 1</button>
+        <button class="menu-item" id="sector_oriente_gonzalez">SECTOR ORIENTE GONZALEZ</button>
+        <button class="menu-item" id="sector_oriente_gonzalez2">SECTOR ORIENTE GONZALEZ 2</button>
+        <button class="menu-item" id="amp_aviacion1">AMP Aviacion 1</button>
+        <button class="menu-item" id="amp_aviacion2">AMP Aviacion 2</button>
+        <button class="menu-item" id="las_palmas">LAS PALMAS</button>
+        <button class="menu-item" id="carolina_yucatan_2da_seccion">Carolina Yucatan 2DA Seccion</button>
+        <button class="menu-item" id="ayuntamiento_sector3">Ayuntamiento Sector 3</button>
+        <button class="menu-item" id="zona_centro_mante">Zona Centro Mante</button>
+        <button class="menu-item" id="vamos_tamaulipas_sector2">Vamos Tamaulipas Sector 2</button>
+        <button class="menu-item" id="mexico">MEXICO</button>
+        <button class="menu-item" id="vicente_guerrero_sector2">Vicente Guerrero Sector 2</button>
+        <button class="menu-item" id="san_agustin">SAN AGUSTIN</button>
+        <button class="menu-item" id="colonia_del_bosque">COLONIA DEL BOSQUE</button>
+        <button class="menu-item" id="fracc_country">Fracc Country</button>
+        <button class="menu-item" id="union">UNION</button>
+        <button class="menu-item" id="municipio_libres">Municipio Libres</button>
+        <button class="menu-item" id="infonavit_linares">Infonavit Linares</button>
+        <button class="menu-item" id="nicolas_bravo">Nicolas Bravo</button>
+        <button class="menu-item" id="las_brisas">Las Brisas</button>
+        <button class="menu-item" id="ej_mariano_matamoros_sector3">Ej Mariano Matamoros Sector 3</button>
+        <button class="menu-item" id="ayuntamiento_sector1">Ayuntamiento Sector 1</button>
+        <button class="menu-item" id="yucatan_sector2">Yucatan Sector 2</button>
+        <button class="menu-item" id="nacional_colectiva_3ra_etapa2">NACIONAL COLECTIVA 3RA ETAPA 2</button>
+        <button class="menu-item" id="aeropuerto">Aeropuerto</button>
+        <button class="menu-item" id="azucarera">AZUCARERA</button>
+        <button class="menu-item" id="obrera1">OBRERA 1</button>
+        <button class="menu-item" id="union_burocratica_4ta_seccion">Union Burocratica 4TA Seccion</button>
+        <button class="menu-item" id="canoas">CANOAS</button>
+        <button class="menu-item" id="campesina_2da_seccion">CAMPESINA 2DA Seccion</button>
+        <button class="menu-item" id="enrique_cardenas_gonzalez">Enrique Cardenas Gonzales</button>
+        <button class="menu-item" id="union_buracratica_sector2">UNION BUROCRATICA SECTOR 2</button>
+        <button class="menu-item" id="fracc_linares">Fracc Linares</button>
+        <button class="menu-item" id="carlos_m_del_pino">Carlos M Del Pino</button>
+        <button class="menu-item" id="cuauhtemoc">CUAUHTEMOC</button>
+        <button class="menu-item" id="fundicion">FUNDICION</button>
+        <button class="menu-item" id="moctezuma">MOCTEZUMA</button>
+        <button class="menu-item" id="chapultepec">CHAPULTEPEC</button>
+        <button class="menu-item" id="victoria">VICTORIA</button>
+        <button class="menu-item" id="valle_de_chapultepec">VALLE DE CHAPULTEPEC</button>
+        <button class="menu-item" id="altavista_II">ALTAVISTA II</button>
+        <button class="menu-item" id="luis_donaldo_colosio_e_independencia">Luis Donaldo Colosio y Independencia</button>
+        <button class="menu-item" id="nacional_colectiva_1ra_etapa2">NACIONAL COLECTIVA 1RA ETAPA 2</button>
+        <button class="menu-item" id="vamos_tamaulipas_e_nuevo_amanecer">Vamos Tamaulipas y Nuevo Amanecer</button>
+        <button class="menu-item" id="union_burocratica_sector1">UNION BUROCRATICA SECTOR I</button>
+        <button class="menu-item" id="ej_mariano_matamoros_sector2">Ej Mariano Matamoros Sector 2</button>
+        <button class="menu-item" id="union_burocratica_sector3">UNION BUROCRATICA SECTOR 3</button>
+        <button class="menu-item" id="fracc_country_sector2">Fracc Country Sector 2</button>
+        <button class="menu-item" id="tamaulipas">TAMAULIPAS</button>
+        <button class="menu-item" id="ladrillera">Ladrillera</button>
+        <button class="menu-item" id="conrado_castillo">CONRADO CASTILLO</button>
+        <button class="menu-item" id="miguel_aleman">MIGUEL ALEMAN</button>
+        <button class="menu-item" id="ampliacion_moctezuma">Ampliacion Moctezuma</button>
+        <button class="menu-item" id="colonia_del_valle">COLONIA DEL VALLE</button>
+        <button class="menu-item" id="el_paraiso">EL PARAISO</button>
+        <button class="menu-item" id="san_jose">SAN JOSE</button>
+        <button class="menu-item" id="enrique_cardenas_gonzalez_sector2">Enrique Cardenas Gonzales Sector 2</button>
+        <button class="menu-item" id="quintero3">Quintero 3</button>
+        <button class="menu-item" id="matamoros">MATAMOROS</button>
+        <button class="menu-item" id="ayuntamiento_sector2">Ayuntamiento Sector 2</button>
+        <button class="menu-item" id="zona_popular">Zona Popular</button>
+        <button class="menu-item" id="carolina_yucatan">Carolina Yucatan</button>
+        <button class="menu-item" id="jesus_yurem">JESUS YUREM</button>
+        <button class="menu-item" id="moderna">MODERNA</button>
+        <button class="menu-item" id="el_paraiso_sector2">El Paraiso Sector 2</button>
+        <button class="menu-item" id="vicente_guerrero">VICENTE GUERRERO</button>
+        <button class="menu-item" id="ej_mariano_matamoros">Ej Mariano Matamoros</button>
+        <button class="menu-item" id="ejido_benito_juarez">EJIDO BENITO JUAREZ</button>
+        <button class="menu-item" id="jose_lopez_portillo">JOSE LOPEZ PORTILLO</button>
+        <button class="menu-item" id="yucatan_sector1">Yucatan Sector 1</button>
+        <button class="menu-item" id="quintero2">Quintero 2</button>
+        <button class="menu-item" id="lomas_del_bernal">LOMAS DEL BERNAL</button>
+        <button class="menu-item" id="fomento_nacional">FOMENTO NACIONAL</button>
+        <button class="menu-item" id="fomento_nacional_sector2">Fomento Nacional Sector 2</button>
+        <button class="menu-item" id="nacional_colectiva_1ra_etapa4">NACIONAL COLECTIVA 1RA ETAPA 4</button>
+        <button class="menu-item" id="el_martillo">EL MARTILLO</button>
+        <button class="menu-item" id="andalucia">ANDALUCIA</button>
+        <button class="menu-item" id="nacional_colectiva_1ra_etapa3">NACIONAL COLECTIVA 1RA ETAPA 3</button>
+        <button class="menu-item" id="colonia1_mante">Colonia 1 Mante</button>
+        <button class="menu-item" id="anahuac2">ANAHUAC 2</button>
+        <button class="menu-item" id="obrera2">OBRERA 2</button>
+        <button class="menu-item" id="las_puentes">Las Puentes</button>
+        <button class="menu-item" id="nacional_colectiva_1ra_etapa">NACIONAL COLECTIVA 1RA ETAPA</button>
+        <button class="menu-item" id="valle_chapultepec_sector2">VALLE DE CHAPULTEPEC Sector 2</button>
+        <button class="menu-item" id="nacional_colectiva_3ra_etapa">NACIONAL COLECTIVA 3RA ETAPA</button>
+        <button class="menu-item" id="nacional_colectiva_3ra_etapa3">NACIONAL COLECTIVA 3RA ETAPA 3</button>
+        <button class="menu-item" id="quintero">Quintero</button>
+        <button class="menu-item" id="alameda">ALAMEDA</button>
+        <button class="menu-item" id="anahuac1">ANAHUAC 1</button>
+        <button class="menu-item" id="plutarco_elias_calles">PLUTARCO ELIAS CALLES</button>
+        <button class="menu-item" id="quintanilla">QUINTANILLA</button>
+        <button class="menu-item" id="miravalle_sector3">MIRAVALLE Sector 3</button>
+        <button class="menu-item" id="miravalle_sector2">MIRAVALLE Sector 2</button>
+        <button class="menu-item" id="unidad_nacional">UNIDAD NACIONAL</button>
+        <button class="menu-item" id="miravalle">MIRAVALLE</button>
+        <button class="menu-item" id="san_antonio">SAN ANTONIO</button>
+        <button class="menu-item" id="ejido_el_limon">EJIDO EL LIMON</button>
+        <button class="menu-item" id="nuevo_morelos_sector6">Nuevo Morelos Sector 6</button>
+        <button class="menu-item" id="nuevo_morelos_sector2">Nuevo Morelos Sector 2</button>
+        <button class="menu-item" id="nuevo_morelos_sector3">Nuevo Morelos Sector 3</button>
+        <button class="menu-item" id="nuevo_morelos_sector4">Nuevo Morelos Sector 4</button>
+        <button class="menu-item" id="nuevo_morelos_sector1">Nuevo Morelos Sector 1</button>
+        <button class="menu-item" id="nuevo_morelos_sector5">Nuevo Morelos Sector 5</button>
+        <button class="menu-item" id="nuevo_morelos_sector8">Nuevo Morelos Sector 8</button>
+        <button class="menu-item" id="nuevo_morelos_sector7">Nuevo Morelos Sector 7</button>
+        <button class="menu-item" id="antonio_amaral">ANTONIO AMARAL</button>
+        <button class="menu-item" id="barrio_oriente_xicotencatl">BARRIO ORIENTE XICOTENCATL</button>
+        <button class="menu-item" id="independencia">INDEPENDENCIA</button>
+        <button class="menu-item" id="hector_m_saenz">HECTOR M SAENZ</button>
+        <button class="menu-item" id="colonia_san_juan">COLONIA SAN JUAN</button>
+        <button class="menu-item" id="hector_saenz_munoz">HECTOR SAENZ MUñoz</button>
+        <button class="menu-item" id="granjas">GRANJAS</button>
+        <button class="menu-item" id="primero_de_mayo">1RO DE MAYO</button>
+        <button class="menu-item" id="trasnportes_wong">Transportes Wong</button>
+        <button class="menu-item" id="centro_xicotencatl">CENTRO XICOTENCATL</button>
+        <button class="menu-item" id="gral_lopez_ibarra">GRAL LOPEZ IBARRA</button>
+        <button class="menu-item" id="jose_de_escandon">JOSE DE ESCANDON</button>
+        <button class="menu-item" id="ampliacion_presidencial">AMPLIACION PRESIDENCIAL</button>
+        <button class="menu-item" id="linda_vista">Linda Vista</button>
+        <button class="menu-item" id="presidencial">PRESIDENCIAL</button>
+        <button class="menu-item" id="ferrocarril">FERROCARRIL</button>
+        <button class="menu-item" id="ricardo_flores_magon">RICARDO FLORES MAGON</button>
+        <button class="menu-item" id="rosendo_g_castro">ROSENDO G CASTRO</button>
+        
+        <div id="data-container"></div>
+    </div>
+    <button id="togglePoints">RPU</button>
+    <button id="toggleNames">Nombres</button>
+    <div id="map"></div>
+    <div id="data-popup">
+        <h3>RPU De La Zona</h3>
+<div id="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>RPU</th>
+                    <th>Latitud</th>
+                    <th>Longitud</th>
+                </tr>
+            </thead>
+            <tbody id="data-table-body"></tbody>
+        </table>
+    </div>
+    <div id="button-container">        
+        <button id="close-popup">Cerrar</button>
+        <button id="addData">Agregar</button>
+    </div>
+    </div>
+    <script>
+        let selectedTableOrigin = null;  // Variable global
+        let opcionmenu = null;  // Variable global
+        let markers = [];
+        let labels = [];
+        let pointsVisible = true;
+        let namesVisible = true;
+
+
+        async function initMap() {
+            const map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: 22.743539810180664, lng: -98.97457122802734 },
+                zoom: 15,
+            });
+
+            await loadPolygons(map);
+            await loadPoints(map);
+
+            document.getElementById("togglePoints").addEventListener("click", () => {
+                pointsVisible = !pointsVisible;
+                markers.forEach(marker => marker.setMap(pointsVisible ? map : null));
+            });
+
+            document.getElementById("toggleNames").addEventListener("click", () => {
+                namesVisible = !namesVisible;
+                labels.forEach(label => label.setMap(namesVisible ? map : null));
+            });
+        }
+
+        document.getElementById("menuButton").addEventListener("click", () => {
+                const menu = document.getElementById("menu");
+                menu.style.display = menu.style.display === "block" ? "none" : "block";
+            });
+
+    
+            document.addEventListener("DOMContentLoaded", function () {
+        // Evento del botón de inicio de sesión
+        document.getElementById("login-button").addEventListener("click", async function () {
+            const usuario = document.getElementById("usuario").value;
+            const password = document.getElementById("password").value;
+            const errorMessage = document.getElementById("error-message");
+
+            // Limpiar mensajes de error anteriores
+            errorMessage.textContent = "";
+
+            if (!usuario || !password) {
+                errorMessage.textContent = "Por favor, ingrese usuario y contraseña.";
+                return;
+            }
+
+            try {
+                // Enviar las credenciales al servidor
+                const response = await fetch("http://localhost:1433/login", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ usuario, password })
+                });
+
+                const data = await response.json();
+
+                // Si la respuesta es exitosa, ocultamos el formulario y mostramos mensaje
+                if (response.ok && data.success) {
+                    // Ocultar el formulario de login
+                    document.getElementById("login-form").style.display = "none";
+                    alert("Inicio de sesión exitoso");
+
+                    // Continuar con el flujo de la página si es necesario
+                } else {
+                    errorMessage.textContent = data.message || "Error en las credenciales.";
+                }
+            } catch (error) {
+                console.error("Error de conexión:", error);
+                errorMessage.textContent = "Error de conexión con el servidor.";
+            }
+        });
+    });
+
+    
+
+function fetchData(tableName) {
+    opcionmenu = tableName; // ✅ Guardar el valor correcto
+    selectedTableOrigin = tableName;
+    console.log("📌 Origen seleccionado:", selectedTableOrigin);
+
+    const popup = document.getElementById("data-popup");
+    const dataTableBody = document.getElementById("data-table-body");
+
+    popup.style.display = "block";
+    dataTableBody.innerHTML = "<tr><td colspan='5'>Cargando...</td></tr>";
+
+    fetch("http://localhost:1433/zona_aldama_sector1", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ opcionmenu })
+})
+.then(response => response.json())
+.then(data => {
+    console.log("📨 Datos recibidos:", data);
+    
+    if (!Array.isArray(data) || data.length === 0) {
+        throw new Error("No se encontraron datos");
+    }
+
+    const dataTableBody = document.getElementById("data-table-body");
+    dataTableBody.innerHTML = ""; // Limpia antes de agregar filas
+
+    const fragment = document.createDocumentFragment();
+    
+    data.forEach(item => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${item.id}</td>
+            <td>${item.nombre}</td>
+            <td>${item.latitud}</td>
+            <td>${item.longitud}</td>
+            <td><button onclick="moveData(${item.id})">Mover</button></td>
+            <td><button onclick="editData(${item.id})">Editar</button></td>
+            <td><button onclick="deleteData(${item.id})">Eliminar</button></td>
+        `;
+        fragment.appendChild(row);
+    });
+
+    dataTableBody.appendChild(fragment); // Inserta todo de golpe para evitar re-renderizado excesivo
+})
+.catch(error => {
+    console.error("❌ Error al cargar los datos:", error);
+    dataTableBody.innerHTML = `<tr><td colspan='5'>Error: ${error.message}</td></tr>`;
+});
+}
+        document.addEventListener("click", (event) => {
+            if (event.target && event.target.id.startsWith("coordenadas")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("zona_aldama_sector1")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("zona_aldama_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("rio_verdito")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("zona_aldama_sector3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("mariano_matamoros")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("zona_centro_aldama1")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("del_bosque")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("brownsville")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("los_pinos")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("fracc_arboledas")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("santa_isabel_sector4")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("santa_isabel")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("barrio_del_pitayo")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("barrio_del_pitayo_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("tamasopo")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("constitucion_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("revolucion_verde")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("arboledas")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("luis_caballero")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("constitucion_sector3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("constitucion")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nuevo_tamaulipas")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("jesus_vega")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("santa_isabel_sector3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("zona_de_aldama_sector4")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("zona_de_aldama_sector3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("la_esperanza")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("santa_isabel_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("antiguo_morelos_sector6")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("antiguo_morelos_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("antiguo_morelos_sector5")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("antiguo_morelos_sector3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("antiguo_morelos_sector4")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("antiguo_morelos_sector1")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("gomez_farrias_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("loma_alta_sector1")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("gomez_farrias_sector1")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("loma_alta_sector3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("gomez_farrias_sector3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("loma_alta_sector5")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("gomez_farrias_sector4")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("loma_alta_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("loma_alta_sector4")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("zona_centro_gonzalez")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("ursulo_galvan")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("libertad_sector3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("piloto")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("progreso_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nuevo_amanecer_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("colonia3_gonzalez")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("aviacion")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("praxedis_balboa")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("tamaulipasg")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("unidad_deportiva")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("los_dos_amigos_sector3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("el_huerto")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("vialactea_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("vialactea_sector1")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("los_dos_amigos_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("graciano_sanchez_sector4")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("graciano_sanchez_sector1")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("buenos_aires")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("unidad_deportiva3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("ampliacion_jardin_manuel")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("cesar_lopez_de_lara2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("progreso")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("unidad_deportiva2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("colonia1_gonzalez")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("graciano_sanchez_sector5")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("cesar_lopez_de_lara3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("graciano_sanchez_sector3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("la_laguna_sector1")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("cesar_lopez_de_lara")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("libertad_sector1")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("libertad_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("colonia2_manuel")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nuevo_amanecer")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("los_dos_amigos")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("grupo_jardin")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("gonzalez_villa_centro")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("san_luisito")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("la_laguna_sector3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("la_laguna_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("ampliacion_jardin")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("colonia4")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("fundadores_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("graciano_sanchez_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("ampliacion_unidad_deportiva")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("graciano_sanchez_sector6")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("fundadores")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("famp_san_luisito")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("sector_oriente_gonzalez")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("sector_oriente_gonzalez2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("amp_aviacion1")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("amp_aviacion2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("las_palmas")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("carolina_yucatan_2da_seccion")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("ayuntamiento_sector3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("zona_centro_mante")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("vamos_tamaulipas_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("mexico")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("vicente_guerrero_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("san_agustin")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("colonia_del_bosque")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("fracc_country")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("union_")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("municipio_libres")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("infonavit_linares")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nicolas_bravo")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("las_brisas")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("ej_mariano_matamoros_sector3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("ayuntamiento_sector1")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("yucatan_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nacional_colectiva_3ra_etapa2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("aeropuerto")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("azucarera")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("obrera1")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("union_burocratica_4ta_seccion")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("canoas")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("campesina_2da_seccion")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("enrique_cardenas_gonzalez")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("union_buracratica_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("fracc_linares")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("carlos_m_del_pino")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("cuauhtemoc")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("fundicion")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("moctezuma")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("chapultepec")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("victoria")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("valle_de_chapultepec")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("altavista_II")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("luis_donaldo_colosio_e_independencia")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nacional_colectiva_1ra_etapa2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("vamos_tamaulipas_e_nuevo_amanecer")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("union_burocratica_sector1")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("ej_mariano_matamoros_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("union_burocratica_sector3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("fracc_country_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("tamaulipas")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("ladrillera")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("conrado_castillo")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("miguel_aleman")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("ampliacion_moctezuma")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("colonia_del_valle")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("el_paraiso")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("san_jose")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("enrique_cardenas_gonzalez_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("quintero3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("matamoros")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("ayuntamiento_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("zona_popular")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("carolina_yucatan")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("jesus_yurem")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("moderna")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("el_paraiso_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("vicente_guerrero")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("ej_mariano_matamoros")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("ejido_benito_juarez")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("jose_lopez_portillo")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("yucatan_sector1")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("quintero2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("lomas_del_bernal")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("fomento_nacional")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("fomento_nacional_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nacional_colectiva_1ra_etapa4")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("el_martillo")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("andalucia")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nacional_colectiva_1ra_etapa3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("colonia1_mante")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("anahuac2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("obrera2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("las_puentes")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nacional_colectiva_1ra_etapa")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("valle_chapultepec_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nacional_colectiva_3ra_etapa")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nacional_colectiva_3ra_etapa3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("quintero")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("alameda")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("anahuac1")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("plutarco_elias_calles")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("quintanilla")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("miravalle_sector3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("miravalle_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("unidad_nacional")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("miravalle")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("san_antonio")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("ejido_el_limon")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nuevo_morelos_sector6")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nuevo_morelos_sector2")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nuevo_morelos_sector3")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nuevo_morelos_sector4")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nuevo_morelos_sector1")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nuevo_morelos_sector5")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nuevo_morelos_sector8")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("nuevo_morelos_sector7")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("antonio_amaral")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("barrio_oriente_xicotencatl")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("independencia")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("hector_m_saenz")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("colonia_san_juan")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("hector_saenz_munoz")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("granjas")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("primero_de_mayo")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("trasnportes_wong")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("centro_xicotencatl")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("gral_lopez_ibarra")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("jose_de_escandon")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("ampliacion_presidencial")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("linda_vista")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("presidencial")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("ferrocarril")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("ricardo_flores_magon")) { fetchData(event.target.id); }
+            if (event.target && event.target.id.startsWith("rosendo_g_castro")) { fetchData(event.target.id); }
+             
+        });
+
+        
+        document.getElementById("close-popup").addEventListener("click", () => {
+        document.getElementById("data-popup").style.display = "none";
+        });
+
+        document.getElementById('addData').addEventListener('click', addData);
+        async function loadPolygons(map) {
+            try {
+                const response = await fetch("http://localhost:1433/poligonos");
+                const data = await response.json();
+
+                data.forEach(polygonData => {
+                    if (!polygonData.geojson) {
+                        console.error("Error: geojson está vacío o undefined", polygonData);
+                        return;
+                    }
+                    
+                    try {
+                        const coordinates = JSON.parse(polygonData.geojson).coordinates[0].map(coord => ({
+                            lat: coord[1], 
+                            lng: coord[0]
+                        }));
+
+                        new google.maps.Polygon({
+                            paths: coordinates,
+                            strokeColor: "#FF0000",
+                            strokeOpacity: 0.8,
+                            strokeWeight: 2,
+                            fillColor: "#80DAEB",
+                            fillOpacity: 0.35,
+                            map: map,
+                        });
+
+                        const center = getPolygonCenter(coordinates);
+                        const label = new google.maps.Marker({
+                            position: center,
+                            map: map,
+                            label: {
+                                text: polygonData.nombre,
+                                color: "black",
+                                fontSize: "16px",
+                                fontWeight: "bold"
+                            },
+                            icon: {
+                                path: google.maps.SymbolPath.CIRCLE,
+                                scale: 0
+                            }
+                        });
+                        labels.push(label);
+                    } catch (error) {
+                        console.error("Error al analizar JSON:", error, polygonData.geojson);
+                    }
+                });
+            } catch (error) {
+                console.error("Error al cargar polígonos:", error);
+            }
+        }
+
+        async function loadPoints(map) {
+            try {
+                const response = await fetch('http://localhost:1433/puntos');
+                const puntos = await response.json();
+
+                puntos.forEach(punto => {
+                    const marker = new google.maps.Marker({
+                        position: { lat: punto.latitud, lng: punto.longitud },
+                        map: map,
+                        title: punto.nombre,
+                    });
+                    markers.push(marker);
+
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: `<h3>${punto.nombre}</h3>`,
+                    });
+
+                    marker.addListener('click', () => {
+                        infoWindow.open(map, marker);
+                    });
+                });
+            } catch (error) {
+                console.error("Error al cargar puntos:", error);
+            }
+        }
+
+        function getPolygonCenter(coords) {
+            let latSum = 0, lngSum = 0;
+            coords.forEach(coord => {
+                latSum += coord.lat;
+                lngSum += coord.lng;
+            });
+            return { lat: latSum / coords.length, lng: lngSum / coords.length };
+        }
+        function moveData(id) {
+            const tableMappings = {
+                "Zona De Aldama Sector 1": "zona_aldama_sector1",
+                "Zona De Aldama Sector 2": "zona_aldama_sector2",
+                "RIO VERDITO": "rio_verdito",
+                "Zona Centro Aldama 3": "zona_aldama_sector3",
+                "MARIANO MATAMOROS": "mariano_matamoros",
+                "Zona Centro Aldama 1": "zona_centro_aldama1",
+                "DEL BOSQUE": "del_bosque",
+                "BROWNSVILLE": "brownsville",
+                "LOS PINOS": "los_pinos",
+                "FRACC ARBOLEDAS": "fracc_arboledas",
+                "Santa Isabel Sector 4": "santa_isabel_sector4",
+                "SANTA ISABEL": "santa_isabel",
+                "BARRIO DEL PITAYO": "barrio_del_pitayo",
+                "BARRIO DEL PITAYO Sector 2": "barrio_del_pitayo_sector2",
+                "TAMASOPO": "tamasopo",
+                "Constitucion Sector 2": "constitucion_sector2",
+                "REVOLUCION VERDE": "revolucion_verde",
+                "ARBOLEDAS": "arboledas",
+                "LUIS CABALLERO": "luis_caballero",
+                "Constitucion Sector 3": "constitucion_sector3",
+                "CONSTITUCION": "constitucion",
+                "NUEVO TAMAULIPAS": "nuevo_tamaulipas",
+                "JESUS VEGA": "jesus_vega",
+                "Santa Isabel Sector 3": "santa_isabel_sector3",
+                "Zona De Aldama Sector 4": "zona_de_aldama_sector4",
+                "Zona De Aldama Sector 3": "zona_de_aldama_sector3",
+                "LA ESPERANZA": "la_esperanza",
+                "Santa Isabel Sector 2": "santa_isabel_sector2",
+                "Antiguo Morelos Sector 6": "antiguo_morelos_sector6",
+                "Antiguo Morelos Sector 2": "antiguo_morelos_sector2",
+                "Antiguo Morelos Sector 5": "antiguo_morelos_sector5",
+                "Antiguo Morelos Sector 3": "antiguo_morelos_sector3",
+                "Antiguo Morelos Sector 4": "antiguo_morelos_sector4",
+                "Antiguo Morelos Sector 1": "antiguo_morelos_sector1",
+                "Gomez Farias Sector 2": "gomez_farrias_sector2",
+                "Loma Alta Sector 1": "loma_alta_sector1",
+                "Gomez Farias Sector 1": "gomez_farrias_sector1",
+                "Loma Alta Sector 3": "loma_alta_sector3",
+                "Gomez Farias Sector 3": "gomez_farrias_sector3",
+                "Loma Alta Sector 5": "loma_alta_sector5",
+                "Gomez Farias Sector 4": "gomez_farrias_sector4",
+                "Loma Alta Sector 2": "loma_alta_sector2",
+                "Loma Alta Sector 4": "loma_alta_sector4",
+                "ZONA CENTRO GONZALEZ": "zona_centro_gonzalez",
+                "Ursulo Galvan": "ursulo_galvan",
+                "Libertad Sector 3": "libertad_sector3",
+                "PILOTO": "piloto",
+                "Progreso Sector 2": "progreso_sector2",
+                "Nuevo Amanecer Sector 2": "nuevo_amanecer_sector2",
+                "COLONIA 3 GONZALEZ": "colonia3_gonzalez",
+                "AVIACION": "aviacion",
+                "PRAXEDIS BALBOA": "praxedis_balboa",
+                "TAMAULIPAS G": "tamaulipasg",
+                "UNIDAD DEPORTIVA": "unidad_deportiva",
+                "Los Dos Amigos Sector 3": "los_dos_amigos_sector3",
+                "EL HUERTO": "el_huerto",
+                "Via Lactea Sector 2": "vialactea_sector2",
+                "Via Lactea Sector 1": "vialactea_sector1",
+                "Graciano Sanchez Sector 4": "graciano_sanchez_sector4",
+                "Graciano Sanchez Sector 1": "graciano_sanchez_sector1",
+                "BUENOS AIRES": "buenos_aires",
+                "Unidad Deportiva 3": "unidad_deportiva3",
+                "AMPLIACION JARDIN MANUEL": "ampliacion_jardin_manuel",
+                "CESAR LOPEZ DE LARA 2": "cesar_lopez_de_lara2",
+                "PROGRESO": "progreso",
+                "Unidad Deportiva 2": "unidad_deportiva2",
+                "COLONIA 1 GONZALEZ": "colonia1_gonzalez",
+                "Graciano Sanchez Sector 5": "graciano_sanchez_sector5",
+                "CESAR LOPEZ DE LARA 3": "cesar_lopez_de_lara3",
+                "Graciano Sanchez Sector 3": "graciano_sanchez_sector3",
+                "LA LAGUNA Sector 1": "la_laguna_sector1",
+                "CESAR LOPEZ DE LARA": "cesar_lopez_de_lara",
+                "Libertad Sector 1": "libertad_sector1",
+                "Libertad Sector 2": "libertad_sector2",
+                "COLONIA 2 MANUEL": "colonia2_manuel",
+                "NUEVO AMANECER": "nuevo_amanecer",
+                "LOS DOS AMIGOS": "los_dos_amigos",
+                "GRUPO JARDIN": "grupo_jardin",
+                "GONZALEZ VILLA CENTRO": "gonzalez_villa_centro",
+                "SAN LUISITO": "san_luisito",
+                "LA LAGUNA Sector 3": "la_laguna_sector3",
+                "LA LAGUNA Sector 2": "la_laguna_sector2",
+                "AMPLIACION JARDIN": "ampliacion_jardin",
+                "COLONIA 4": "colonia4",
+                "Fundadores Sector 2": "fundadores_sector2",
+                "Graciano Sanchez Sector 2": "graciano_sanchez_sector2",
+                "AMPLIACION UNIDAD DEPORTIVA": "ampliacion_unidad_deportiva",
+                "Graciano Sanchez Sector 6": "graciano_sanchez_sector6",
+                "FUNDADORES": "fundadores",
+                "AMP San Luisito 1": "amp_san_luisito",
+                "SECTOR ORIENTE GONZALEZ": "sector_oriente_gonzalez",
+                "SECTOR ORIENTE GONZALEZ 2": "sector_oriente_gonzalez2",
+                "AMP Aviacion 1": "amp_aviacion1",
+                "AMP Aviacion 2": "amp_aviacion2",
+                "LAS PALMAS": "las_palmas",
+                "Carolina Yucatan 2DA Seccion": "carolina_yucatan_2da_seccion",
+                "Ayuntamiento Sector 3": "ayuntamiento_sector3",
+                "Zona Centro Mante": "zona_centro_mante",
+                "Vamos Tamaulipas Sector 2": "vamos_tamaulipas_sector2",
+                "MEXICO": "mexico",
+                "Vicente Guerrero Sector 2": "vicente_guerrero_sector2",
+                "SAN AGUSTIN": "san_agustin",
+                "COLONIA DEL BOSQUE": "colonia_del_bosque",
+                "Fracc Country": "fracc_country",
+                "UNION": "union_",
+                "Municipio Libres": "municipio_libres",
+                "Infonavit Linares": "infonavit_linares",
+                "Nicolas Bravo": "nicolas_bravo",
+                "Las Brisas": "las_brisas",
+                "Ej Mariano Matamoros Sector 3": "ej_mariano_matamoros_sector3",
+                "Ayuntamiento Sector 1": "ayuntamiento_sector1",
+                "Yucatan Sector 2": "yucatan_sector2",
+                "NACIONAL COLECTIVA 3RA ETAPA 2": "nacional_colectiva_3ra_etapa2",
+                "Aeropuerto": "aeropuerto",
+                "AZUCARERA": "azucarera",
+                "OBRERA 1": "obrera1",
+                "Union Burocratica 4TA Seccion": "union_burocratica_4ta_seccion",
+                "CANOAS": "canoas",
+                "CAMPESINA 2DA Seccion": "campesina_2da_seccion",
+                "Enrique Cardenas Gonzales": "enrique_cardenas_gonzalez",
+                "UNION BUROCRATICA SECTOR 2": "union_buracratica_sector2",
+                "Fracc Linares": "fracc_linares",
+                "Carlos M Del Pino ": "carlos_m_del_pino",
+                "CUAUHTEMOC": "cuauhtemoc",
+                "FUNDICION": "fundicion",
+                "MOCTEZUMA": "moctezuma",
+                "CHAPULTEPEC": "chapultepec",
+                "VICTORIA": "victoria",
+                "VALLE DE CHAPULTEPEC": "valle_de_chapultepec",
+                "ALTAVISTA II": "altavista_II",
+                "Luis Donaldo Colosio e Independencia": "luis_donaldo_colosio_e_independencia",
+                "NACIONAL COLECTIVA 1RA ETAPA 2": "nacional_colectiva_1ra_etapa2",
+                "Vamos Tamaulipas y Nuevo Amanecer": "vamos_tamaulipas_e_nuevo_amanecer",
+                "UNION BUROCRATICA SECTOR I": "union_burocratica_sector1",
+                "Ej Mariano Matamoros Sector 2": "ej_mariano_matamoros_sector2",
+                "UNION BUROCRATICA SECTOR 3": "union_burocratica_sector3",
+                "Fracc Country Sector 2": "fracc_country_sector2",
+                "TAMAULIPAS": "tamaulipas",
+                "Ladrillera": "ladrillera",
+                "CONRADO CASTILLO": "conrado_castillo",
+                "MIGUEL ALEMAN": "miguel_aleman",
+                "Ampliacion Moctezuma": "ampliacion_moctezuma",
+                "COLONIA DEL VALLE": "colonia_del_valle",
+                "EL PARAISO": "el_paraiso",
+                "SAN JOSE": "san_jose",
+                "Enrique Cardenas Gonzales Sector 2": "enrique_cardenas_gonzalez_sector2",
+                "Quintero 3": "quintero3",
+                "MATAMOROS": "matamoros",
+                "Ayuntamiento Sector 2": "ayuntamiento_sector2",
+                "Zona Popular": "zona_popular",
+                "Carolina Yucatan": "carolina_yucatan",
+                "JESUS YUREM": "jesus_yurem",
+                "MODERNA": "moderna",
+                "El Paraiso Sector 2": "el_paraiso_sector2",
+                "VICENTE GUERRERO": "vicente_guerrero",
+                "Ej Mariano Matamoros": "ej_mariano_matamoros",
+                "EJIDO BENITO JUAREZ": "ejido_benito_juarez",
+                "JOSE LOPEZ PORTILLO": "jose_lopez_portillo",
+                "Yucatan Sector 1": "yucatan_sector1",
+                "Quintero 2": "quintero2",
+                "LOMAS DEL BERNAL": "lomas_del_bernal",
+                "FOMENTO NACIONAL": "fomento_nacional",
+                "Fomento Nacional Sector 2": "fomento_nacional_sector2",
+                "NACIONAL COLECTIVA 1RA ETAPA 4": "nacional_colectiva_1ra_etapa4",
+                "EL MARTILLO": "el_martillo",
+                "ANDALUCIA": "andalucia",
+                "NACIONAL COLECTIVA 1RA ETAPA 3": "nacional_colectiva_1ra_etapa3",
+                "Colonia 1 Mante": "colonia1_mante",
+                "ANAHUAC 2": "anahuac2",
+                "OBRERA 2": "obrera2",
+                "Las Puentes": "las_puentes",
+                "NACIONAL COLECTIVA 1RA ETAPA": "nacional_colectiva_1ra_etapa",
+                "VALLE DE CHAPULTEPEC Sector 2": "valle_chapultepec_sector2",
+                "NACIONAL COLECTIVA 3RA ETAPA": "nacional_colectiva_3ra_etapa",
+                "NACIONAL COLECTIVA 3RA ETAPA 3": "nacional_colectiva_3ra_etapa3",
+                "Quintero": "quintero",
+                "ALAMEDA": "alameda",
+                "ANAHUAC 1": "anahuac1",
+                "PLUTARCO ELIAS CALLES": "plutarco_elias_calles",
+                "QUINTANILLA": "quintanilla",
+                "MIRAVALLE Sector 3": "miravalle_sector3",
+                "MIRAVALLE Sector 2": "miravalle_sector2",
+                "UNIDAD NACIONAL": "unidad_nacional",
+                "MIRAVALLE": "miravalle",
+                "SAN ANTONIO": "san_antonio",
+                "EJIDO EL LIMON": "ejido_el_limon",
+                "Nuevo Morelos Sector 6": "nuevo_morelos_sector6",
+                "Nuevo Morelos Sector 2": "nuevo_morelos_sector2",
+                "Nuevo Morelos Sector 3": "nuevo_morelos_sector3",
+                "Nuevo Morelos Sector 4": "nuevo_morelos_sector4",
+                "Nuevo Morelos Sector 1": "nuevo_morelos_sector1",
+                "Nuevo Morelos Sector 5": "nuevo_morelos_sector5",
+                "Nuevo Morelos Sector 8": "nuevo_morelos_sector8",
+                "Nuevo Morelos Sector 7": "nuevo_morelos_sector7",
+                "ANTONIO AMARAL": "antonio_amaral",
+                "BARRIO ORIENTE XICOTENCATL": "barrio_oriente_xicotencatl",
+                "INDEPENDENCIA": "independencia",
+                "HECTOR M SAENZ": "hector_m_saenz",
+                "COLONIA SAN JUAN": "colonia_san_juan",
+                "HECTOR SAENZ MUÑOZ": "hector_saenz_munoz",
+                "GRANJAS": "granjas",
+                "1RO DE MAYO": "primero_de_mayo",
+                "Transportes Wong": "trasnportes_wong",
+                "CENTRO XICOTENCATL": "centro_xicotencatl",
+                "GRAL LOPEZ IBARRA": "gral_lopez_ibarra",
+                "JOSE DE ESCANDON": "jose_de_escandon",
+                "AMPLIACION PRESIDENCIAL": "ampliacion_presidencial",
+                "Linda Vista": "linda_vista",
+                "PRESIDENCIAL": "presidencial",
+                "FERROCARRIL": "ferrocarril",
+                "RICARDO FLORES MAGON": "ricardo_flores_magon",
+                "ROSENDO G CASTRO": "rosendo_g_castro",
+                
+            };
+
+    
+    let popup = document.createElement("div");
+    popup.id = "move-popup";
+    popup.style.position = "fixed";
+    popup.style.top = "50%";
+    popup.style.left = "50%";
+    popup.style.transform = "translate(-50%, -50%)";
+    popup.style.background = "white";
+    popup.style.padding = "20px";
+    popup.style.borderRadius = "5px";
+    popup.style.boxShadow = "2px 2px 10px rgba(0, 0, 0, 0.5)";
+    
+    popup.innerHTML = `
+        <h3>Selecciona Destino</h3>
+        <select id="table-select">
+            ${Object.keys(tableMappings).map(option => `<option value="${option}">${option}</option>`).join("")}
+        </select>
+        <br><br>
+        <button id="confirm-move">Mover</button>
+        <button id="cancel-move">Cancelar</button>
+    `;
+
+    document.body.appendChild(popup);
+
+    document.getElementById("confirm-move").addEventListener("click", async () => {
+        const selectedOption = document.getElementById("table-select").value;
+        const selectedTable = tableMappings[selectedOption];
+        try {
+            const response = await fetch(`http://localhost:1433/mover_dato`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    id, 
+                    destino: selectedTable, 
+                    origen: selectedTableOrigin
+                })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                alert("Dato movido con éxito.");
+                document.getElementById("move-popup").remove();
+                document.getElementById("data-popup").style.display = "none";
+            } else {
+                //alert("Error al mover el dato.");
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            alert("Error de conexión con el servidor.");
+        }
+        alert("Registro movido exitosamente.");
+        popup.remove();
+    });
+
+    document.getElementById("cancel-move").addEventListener("click", () => {
+        document.getElementById("move-popup").remove();
+    });
+}
+
+function editData(id = null, nombre = '', latitud = '', longitud = '') {
+        const isNewRecord = id === null;
+
+        // Formulario flotante (popup)
+        const formHTML = `
+            <div id="edit-popup" class="popup">
+                <div class="popup-content">
+                    <h3>${isNewRecord ? 'Agregar Nuevo Registro' : 'Editar Registro'}</h3>
+                    <form id="edit-form">
+                        <label>ID:</label>
+                        <input type="text" id="edit-id" value="${id || ''}" ${isNewRecord ? '' : 'readonly'}>
+                       
+                        <label>RPU:</label>
+                        <input type="text" id="edit-nombre" value="${nombre}" required>
+                       
+                        <label>Latitud:</label>
+                        <input type="number" step="any" id="edit-latitud" value="${latitud}" required>
+                       
+                        <label>Longitud:</label>
+                        <input type="number" step="any" id="edit-longitud" value="${longitud}" required>
+
+                        <button type="button" onclick="saveData(${id || 'null'})">
+                            ${isNewRecord ? 'Agregar' : 'Guardar Cambios'}
+                        </button>
+                        <button type="button" onclick="closeEditPopup()">Cancelar</button>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        const popup = document.createElement('div');
+        popup.innerHTML = formHTML;
+        document.body.appendChild(popup);
+
+        // Establecer el estilo del fondo
+        const overlay = document.createElement('div');
+        overlay.classList.add('popup-overlay');
+        document.body.appendChild(overlay);
+    }
+
+    function closeEditPopup() {
+        const popup = document.getElementById('edit-popup');
+        const overlay = document.querySelector('.popup-overlay');
+        if (popup) popup.remove();
+        if (overlay) overlay.remove();
+    }
+
+    function saveData(id) {
+    const isNewRecord = id === null;
+
+    const data = {
+        id: document.getElementById('edit-id').value,
+        nombre: document.getElementById('edit-nombre').value,
+        latitud: parseFloat(document.getElementById('edit-latitud').value),
+        longitud: parseFloat(document.getElementById('edit-longitud').value),
+        opcionmenu: opcionmenu // 🔹 Asegúrate de que esta variable tenga valor
+    };
+
+    fetch(`http://localhost:1433/${isNewRecord ? 'agregar_registro' : 'editar_registro'}`, {
+        method: isNewRecord ? "POST" : "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        alert(result.message || 'Operación exitosa');
+        closeEditPopup();
+        fetchData(selectedTableOrigin);  // ✅ Actualiza la tabla después del cambio
+    })
+    .catch(error => {
+        console.error("❌ Error:", error);
+        alert("Error al guardar el registro.");
+    });
+}
+
+        // Función para eliminar un registro
+        function deleteData(id) {
+            if (!confirm(`¿Estás seguro de que deseas eliminar el registro con ID ${id}?`)) {
+                return; // Si el usuario cancela, no hace nada
+            }
+
+            fetch("http://localhost:1433/eliminar_registro", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id, opcionmenu }) // ✅ Se envía la tabla seleccionada
+            })
+            .then(response => response.json())
+            .then(result => {
+                alert(result.message || 'Registro eliminado correctamente.');
+                fetchData(selectedTableOrigin);  // ✅ Recarga la tabla para mostrar los cambios
+            })
+            .catch(error => {
+                console.error("❌ Error al eliminar registro:", error);
+                alert("Error al eliminar el registro.");
+            });
+        }
+
+// Mostrar el formulario para agregar un nuevo registro
+function addData() {
+    const formHTML = `
+        <div id="add-popup" class="popup">
+            <div class="popup-content">
+                <h3>Agregar Nuevo Registro</h3>
+                <form id="add-form">
+                    <label>ID:</label>
+                    <input type="text" id="add-id" value="" required>
+
+                    <label>RPU:</label>
+                    <input type="text" id="add-nombre" required>
+
+                    <label>Latitud:</label>
+                    <input type="number" step="any" id="add-latitud" required>
+
+                    <label>Longitud:</label>
+                    <input type="number" step="any" id="add-longitud" required>
+
+                    <button type="button" onclick="saveNewData()">Agregar</button>
+                    <button type="button" onclick="closeAddPopup()">Cancelar</button>
+                </form>
+            </div>
+        </div>
+    `;
+
+    const popup = document.createElement('div');
+    popup.innerHTML = formHTML;
+    document.body.appendChild(popup);
+
+    const overlay = document.createElement('div');
+    overlay.classList.add('popup-overlay');
+    document.body.appendChild(overlay);
+}
+
+// Cerrar el formulario de agregar
+function closeAddPopup() {
+    const popup = document.getElementById('add-popup');
+    const overlay = document.querySelector('.popup-overlay');
+    if (popup) popup.remove();
+    if (overlay) overlay.remove();
+}
+
+// Guardar un nuevo registro
+function saveNewData() {
+    const data = {
+        id: document.getElementById('add-id').value,
+        nombre: document.getElementById('add-nombre').value,
+        latitud: parseFloat(document.getElementById('add-latitud').value),
+        longitud: parseFloat(document.getElementById('add-longitud').value),
+        opcionmenu: opcionmenu // Asegúrate de que esta variable esté definida
+    };
+
+    fetch('http://localhost:1433/agregar_registro', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        alert(result.message || 'Registro agregado exitosamente');
+        closeAddPopup();
+        fetchData(selectedTableOrigin);  // ✅ Actualiza la tabla después del cambio
+    })
+    .catch(error => {
+        console.error("❌ Error:", error);
+        alert("Error al agregar el registro.");
+    });
+}
+
+        window.onload = initMap;
+    </script>
+</body>
+</html>
